@@ -19,3 +19,13 @@ def test_logging_setup() -> None:
     assert logger.name == "test_smoke"
     assert len(logger.handlers) >= 1
     logger.info("Smoke test structured log message executed successfully.")
+
+
+def test_dagster_definitions_and_asset() -> None:
+    """Verify that Dagster definitions and placeholder asset load properly."""
+    from dagster_project.definitions import defs, placeholder_smoke_asset
+
+    assert defs is not None
+    # Execute the placeholder asset directly
+    result = placeholder_smoke_asset()
+    assert "PakFuelWatch" in result

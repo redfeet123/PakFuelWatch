@@ -1,0 +1,134 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pakfuelwatch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-pakfuelwatch}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-pakfuelwatch}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  minio:
+    image: minio/minio:latest
+    container_name: pakfuelwatch-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: pakfuelwatch-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY;
+      /usr/bin/mc mb --ignore-existing myminio/bronze;
+      /usr/bin/mc mb --ignore-existing myminio/silver;
+      /usr/bin/mc mb --ignore-existing myminio/gold;
+      exit 0;
+      "
+    restart: "no"
+
+  dagster-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pakfuelwatch-dagster-webserver
+    restart: unless-stopped
+    command: dagster-webserver -h 0.0.0.0 -p 3000 -w /opt/dagster/dagster_home/workspace.yaml
+    ports:
+      - "${DAGSTER_WEBSERVER_PORT:-3000}:3000"
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-pakfuelwatch}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      EIA_API_KEY: ${EIA_API_KEY:-}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      SBP_API_KEY: ${SBP_API_KEY:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - ./dagster_project:/opt/dagster/app/dagster_project
+      - ./ingestion:/opt/dagster/app/ingestion
+      - ./dagster.yaml:/opt/dagster/dagster_home/dagster.yaml:ro
+      - ./workspace.yaml:/opt/dagster/dagster_home/workspace.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  dagster-daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pakfuelwatch-dagster-daemon
+    restart: unless-stopped
+    command: dagster-daemon run
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-pakfuelwatch}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      EIA_API_KEY: ${EIA_API_KEY:-}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      SBP_API_KEY: ${SBP_API_KEY:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - ./dagster_project:/opt/dagster/app/dagster_project
+      - ./ingestion:/opt/dagster/app/ingestion
+      - ./dagster.yaml:/opt/dagster/dagster_home/dagster.yaml:ro
+      - ./workspace.yaml:/opt/dagster/dagster_home/workspace.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
+  minio_data:

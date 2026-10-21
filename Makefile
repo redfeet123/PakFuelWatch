@@ -1,4 +1,4 @@
-.PHONY: install lint test up down help
+.PHONY: install lint test up down logs help
 
 VENV ?= .venv
 PYTHON = $(VENV)/bin/python3
@@ -11,8 +11,9 @@ help:
 	@echo "  install  - Create virtual environment and install pinned dependencies"
 	@echo "  lint     - Run ruff linter and style checks"
 	@echo "  test     - Run pytest test suite"
-	@echo "  up       - Start docker compose services"
-	@echo "  down     - Stop docker compose services"
+	@echo "  up       - Build images and start all docker compose services in background"
+	@echo "  down     - Stop and remove all docker compose services"
+	@echo "  logs     - Tail logs from all docker compose services"
 
 install:
 	@if [ ! -d "$(VENV)" ]; then python3 -m venv $(VENV); fi
@@ -26,7 +27,11 @@ test:
 	@if [ -x "$(PYTEST)" ]; then $(PYTEST); else pytest; fi
 
 up:
-	docker compose up -d
+	@if [ ! -f .env ]; then cp .env.example .env; fi
+	docker compose up -d --build
 
 down:
 	docker compose down
+
+logs:
+	docker compose logs -f
