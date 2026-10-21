@@ -1,0 +1,30 @@
+# Core Pipeline & Lakehouse
+dagster==1.13.26
+dagster-webserver==1.13.26
+dagster-postgres==0.29.26
+boto3==1.43.106
+s3fs==2026.9.0
+deltalake==1.6.6
+pyarrow==25.0.1
+pandas==2.3.3
+duckdb==1.5.6
+dbt-duckdb==1.11.0
+
+# Settings, Resilience & HTTP
+pydantic-settings==2.8.1
+tenacity==9.2.1
+requests==2.34.2
+
+# Extraction & Scraping
+pdfplumber==0.11.10
+openpyxl==3.1.5
+patchright==1.64.1
+
+# Dashboard & Alerts
+streamlit==1.65.0
+plotly==7.1.0
+python-telegram-bot==22.8
+
+# Development & Testing
+pytest==9.1.1
+ruff==0.17.1

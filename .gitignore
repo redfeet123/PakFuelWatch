@@ -1,0 +1,43 @@
+# Environment & Secrets
+.env
+*.env.local
+
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ruff & Linters
+.ruff_cache/
+
+# Local Data & Lakehouse Scratch
+data/
+*.duckdb
+*.duckdb.tmp/
+
+# Patchright Browser Profiles & Downloads
+.patchright/
+.patchright-profile/
+patchright_profiles/
+browser_profile/
+
+# Build artifacts & packages
+build/
+dist/
+*.egg-info/
+
+# IDE & Editor folders
+.vscode/
+.idea/
+.DS_Store
