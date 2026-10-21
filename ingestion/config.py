@@ -80,6 +80,36 @@ class Settings(BaseSettings):
         description="PostgreSQL port number",
     )
 
+    # Browser Scraping (Patchright & PBS)
+    browser_user_data_dir: str = Field(
+        default=".patchright_user_data",
+        description="Path to persistent browser profile user data directory",
+    )
+    browser_headless: bool = Field(
+        default=True,
+        description="Run browser in headless mode",
+    )
+    browser_channel: Optional[str] = Field(
+        default=None,
+        description="Browser channel ('chrome' for local Chrome, None for bundled Chromium)",
+    )
+    browser_min_delay_seconds: float = Field(
+        default=2.0,
+        description="Minimum seconds delay between polite requests to the same host",
+    )
+    browser_timeout_seconds: float = Field(
+        default=30.0,
+        description="Navigation and selector timeout in seconds",
+    )
+    browser_max_retries: int = Field(
+        default=3,
+        description="Maximum retry attempts on navigation failure",
+    )
+    pbs_base_url: str = Field(
+        default="https://www.pbs.gov.pk",
+        description="Base URL for Pakistan Bureau of Statistics portal",
+    )
+
     @property
     def postgres_connection_string(self) -> str:
         """Construct PostgreSQL SQLAlchemy connection URI."""

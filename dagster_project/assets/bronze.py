@@ -17,12 +17,21 @@ from ingestion.sources.brent import (
     fetch_brent_backfill,
     fetch_brent_incremental,
 )
+from ingestion.sources.fuel import (
+    fetch_news_fuel_prices,
+    fetch_pso_fuel_prices,
+)
 from ingestion.sources.fx import (
     fetch_fx_backfill,
     fetch_fx_incremental,
 )
 from ingestion.sources.hdx_food import (
     fetch_hdx_food_prices,
+)
+from ingestion.sources.pbs import (
+    fetch_pbs_backfill,
+    fetch_pbs_cpi_latest,
+    fetch_pbs_spi_latest,
 )
 from ingestion.sources.worldbank import (
     fetch_worldbank_all,
@@ -101,7 +110,80 @@ def bronze_hdx_food(context: AssetExecutionContext) -> Output[Dict[str, Any]]:
     )
 
 
-bronze_assets = [bronze_brent, bronze_fx, bronze_worldbank, bronze_hdx_food]
+@asset(
+    group_name="bronze",
+    compute_kind="patchright",
+    description="Scrape weekly Sensitive Price Indicator (SPI) release from PBS.",
+)
+def bronze_pbs_spi(context: AssetExecutionContext) -> Output[Dict[str, Any]]:
+    """Fetch latest weekly SPI release from Pakistan Bureau of Statistics."""
+    context.log.info("Starting bronze_pbs_spi browser ingestion...")
+    uri, was_written = fetch_pbs_spi_latest()
+    context.log.info("Completed bronze_pbs_spi: %s (new_write=%s)", uri, was_written)
+    return Output(
+        value={"uri": uri, "written": was_written},
+        metadata={"s3_uri": uri, "was_written": was_written, "source": "pbs_spi"},
+    )
+
+
+@asset(
+    group_name="bronze",
+    compute_kind="patchright",
+    description="Scrape monthly Consumer Price Index (CPI) release from PBS.",
+)
+def bronze_pbs_cpi(context: AssetExecutionContext) -> Output[Dict[str, Any]]:
+    """Fetch latest monthly CPI release from Pakistan Bureau of Statistics."""
+    context.log.info("Starting bronze_pbs_cpi browser ingestion...")
+    uri, was_written = fetch_pbs_cpi_latest()
+    context.log.info("Completed bronze_pbs_cpi: %s (new_write=%s)", uri, was_written)
+    return Output(
+        value={"uri": uri, "written": was_written},
+        metadata={"s3_uri": uri, "was_written": was_written, "source": "pbs_cpi"},
+    )
+
+
+@asset(
+    group_name="bronze",
+    compute_kind="patchright",
+    description="Scrape official fuel price notification page (PSO) into Bronze.",
+)
+def bronze_fuel_pso(context: AssetExecutionContext) -> Output[Dict[str, Any]]:
+    """Scrape official fuel price notification page saving HTML and screenshot to Bronze."""
+    context.log.info("Starting bronze_fuel_pso browser scraping...")
+    html_uri, png_uri = fetch_pso_fuel_prices()
+    context.log.info("Completed bronze_fuel_pso: HTML=%s, PNG=%s", html_uri, png_uri)
+    return Output(
+        value={"html_uri": html_uri, "png_uri": png_uri},
+        metadata={"html_uri": html_uri, "png_uri": png_uri, "source": "fuel_pso"},
+    )
+
+
+@asset(
+    group_name="bronze",
+    compute_kind="patchright",
+    description="Scrape fuel price announcement news coverage into Bronze.",
+)
+def bronze_fuel_news(context: AssetExecutionContext) -> Output[Dict[str, Any]]:
+    """Scrape news announcement coverage saving HTML and screenshot to Bronze."""
+    context.log.info("Starting bronze_fuel_news browser scraping...")
+    html_uri, png_uri = fetch_news_fuel_prices()
+    context.log.info("Completed bronze_fuel_news: HTML=%s, PNG=%s", html_uri, png_uri)
+    return Output(
+        value={"html_uri": html_uri, "png_uri": png_uri},
+        metadata={"html_uri": html_uri, "png_uri": png_uri, "source": "fuel_news"},
+    )
+
+
+bronze_assets = [
+    bronze_brent,
+    bronze_fx,
+    bronze_worldbank,
+    bronze_hdx_food,
+    bronze_pbs_spi,
+    bronze_pbs_cpi,
+    bronze_fuel_pso,
+    bronze_fuel_news,
+]
 
 
 # =====================================================================
@@ -190,15 +272,50 @@ def hdx_backfill_job() -> None:
     op_hdx_backfill()
 
 
+@op(description="Execute historical backfill of PBS releases.")
+def op_pbs_backfill() -> int:
+    """Op executing historical backfill of PBS releases."""
+    results = fetch_pbs_backfill(months=12)
+    return len(results)
+
+
+@job(description="Backfill job for PBS historical releases (at least 12 months).")
+def pbs_backfill_job() -> None:
+    """Job to backfill PBS historical releases."""
+    op_pbs_backfill()
+
+
+pbs_spi_weekly_job = define_asset_job(
+    name="pbs_spi_weekly_job",
+    selection=["bronze_pbs_spi"],
+    description="Job executing weekly PBS Sensitive Price Indicator (SPI) scraping.",
+)
+
+pbs_cpi_monthly_job = define_asset_job(
+    name="pbs_cpi_monthly_job",
+    selection=["bronze_pbs_cpi"],
+    description="Job executing monthly PBS Consumer Price Index (CPI) scraping.",
+)
+
+fuel_scrape_job = define_asset_job(
+    name="fuel_scrape_job",
+    selection=["bronze_fuel_pso", "bronze_fuel_news"],
+    description="Job scraping fuel price announcements from official and news sources.",
+)
+
 bronze_jobs = [
     brent_daily_job,
     fx_daily_job,
     worldbank_monthly_job,
     hdx_weekly_job,
+    pbs_spi_weekly_job,
+    pbs_cpi_monthly_job,
+    fuel_scrape_job,
     brent_backfill_job,
     fx_backfill_job,
     worldbank_backfill_job,
     hdx_backfill_job,
+    pbs_backfill_job,
 ]
 
 
@@ -238,9 +355,46 @@ hdx_weekly_schedule = ScheduleDefinition(
     description="Weekly schedule fetching HDX food prices every Monday at 03:00 UTC",
 )
 
+# PBS SPI weekly on Friday at 12:00 UTC
+pbs_spi_weekly_schedule = ScheduleDefinition(
+    name="pbs_spi_weekly_schedule",
+    job=pbs_spi_weekly_job,
+    cron_schedule="0 12 * * 5",
+    description="Weekly schedule fetching PBS SPI release on Friday at 12:00 UTC",
+)
+
+# PBS CPI monthly on 2nd of month at 08:00 UTC
+pbs_cpi_monthly_schedule = ScheduleDefinition(
+    name="pbs_cpi_monthly_schedule",
+    job=pbs_cpi_monthly_job,
+    cron_schedule="0 8 2 * *",
+    description="Monthly schedule fetching PBS CPI release on 2nd of month at 08:00 UTC",
+)
+
+# Fuel revision window: every 6 hours around the 15th and month-end
+fuel_revision_window_schedule = ScheduleDefinition(
+    name="fuel_revision_window_schedule",
+    job=fuel_scrape_job,
+    cron_schedule="0 */6 14,15,16,28,29,30,31 * *",
+    description="Scrape fuel prices every 6 hours during revision windows (14-16 & 28-31)",
+)
+
+# Fuel daily otherwise
+fuel_daily_schedule = ScheduleDefinition(
+    name="fuel_daily_schedule",
+    job=fuel_scrape_job,
+    cron_schedule="0 6 1-13,17-27 * *",
+    description="Scrape fuel prices daily at 06:00 UTC during standard non-revision days",
+)
+
 bronze_schedules = [
     brent_daily_schedule,
     fx_daily_schedule,
     worldbank_monthly_schedule,
     hdx_weekly_schedule,
+    pbs_spi_weekly_schedule,
+    pbs_cpi_monthly_schedule,
+    fuel_revision_window_schedule,
+    fuel_daily_schedule,
 ]
+

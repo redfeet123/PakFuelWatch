@@ -1,0 +1,31 @@
+# Ingestion CSS and XPath selectors for web scraping
+# Keep all web scraper selectors in this file so they can be updated when site structures change without touching code.
+
+pbs:
+  base_url: "https://www.pbs.gov.pk"
+  spi:
+    page_url: "https://www.pbs.gov.pk/cpi"
+    navigation_link: "a[href*='spi'], a:has-text('Sensitive Price Indicator'), a:has-text('SPI')"
+    release_links: "a[href*='spi'], a[href*='SPI'], a[href$='.pdf'], a[href$='.xlsx'], a[href$='.xls']"
+    table_rows: "table tr"
+    title_header: "h1, h2, h3, .page-title, .title"
+  cpi:
+    page_url: "https://www.pbs.gov.pk/cpi"
+    navigation_link: "a[href*='cpi'], a:has-text('Consumer Price Index'), a:has-text('CPI')"
+    release_links: "a[href*='cpi'], a[href*='CPI'], a[href*='inflation'], a[href$='.pdf'], a[href$='.xlsx'], a[href$='.xls']"
+    table_rows: "table tr"
+    title_header: "h1, h2, h3, .page-title, .title"
+
+fuel:
+  pso:
+    page_url: "https://psopk.com/en/fuels/fuel-prices"
+    table_rows: "table tbody tr, table tr, .price-table tr"
+    effective_date: ".effective-date, .date, time, h3, .price-notice"
+    product_col: "td:nth-child(1), .product-name"
+    price_col: "td:nth-child(2), .price-val"
+  news:
+    page_url: "https://www.dawn.com/news/fuel-prices"
+    article_title: "h1.story__title, h1, .title"
+    effective_date: ".story__time, time, .date"
+    article_content: ".story__content, article, p"
+

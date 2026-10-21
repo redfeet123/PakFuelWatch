@@ -65,7 +65,22 @@ FOOD_PRICES_SCHEMA = pa.schema(
     ]
 )
 
-# Registry mapping silver table names to their PyArrow schema
+# 7. fuel_price_conflicts(effective_date, product, source_a, price_a,
+#    source_b, price_b, pct_difference, detected_at)
+FUEL_PRICE_CONFLICTS_SCHEMA = pa.schema(
+    [
+        pa.field("effective_date", pa.date32(), nullable=False),
+        pa.field("product", pa.string(), nullable=False),
+        pa.field("source_a", pa.string(), nullable=False),
+        pa.field("price_a", pa.float64(), nullable=False),
+        pa.field("source_b", pa.string(), nullable=False),
+        pa.field("price_b", pa.float64(), nullable=False),
+        pa.field("pct_difference", pa.float64(), nullable=False),
+        pa.field("detected_at", pa.string(), nullable=False),
+    ]
+)
+
+# Registry mapping the six core silver table names to their PyArrow schema
 SILVER_SCHEMAS: Dict[str, pa.Schema] = {
     "brent_daily": BRENT_DAILY_SCHEMA,
     "fx_daily": FX_DAILY_SCHEMA,
@@ -74,3 +89,4 @@ SILVER_SCHEMAS: Dict[str, pa.Schema] = {
     "spi_weekly": SPI_WEEKLY_SCHEMA,
     "food_prices": FOOD_PRICES_SCHEMA,
 }
+

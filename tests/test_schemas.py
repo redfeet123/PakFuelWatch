@@ -6,6 +6,7 @@ from ingestion.core.schemas import (
     BRENT_DAILY_SCHEMA,
     CPI_MONTHLY_SCHEMA,
     FOOD_PRICES_SCHEMA,
+    FUEL_PRICE_CONFLICTS_SCHEMA,
     FUEL_PRICES_SCHEMA,
     FX_DAILY_SCHEMA,
     SILVER_SCHEMAS,
@@ -75,3 +76,22 @@ def test_food_prices_schema_fields() -> None:
     assert FOOD_PRICES_SCHEMA.names == ["date", "market", "commodity", "price", "unit"]
     assert FOOD_PRICES_SCHEMA.field("date").type == pa.date32()
     assert FOOD_PRICES_SCHEMA.field("price").type == pa.float64()
+
+
+def test_fuel_price_conflicts_schema_fields() -> None:
+    """Validate fields and types for fuel_price_conflicts schema."""
+    assert FUEL_PRICE_CONFLICTS_SCHEMA.names == [
+        "effective_date",
+        "product",
+        "source_a",
+        "price_a",
+        "source_b",
+        "price_b",
+        "pct_difference",
+        "detected_at",
+    ]
+    assert FUEL_PRICE_CONFLICTS_SCHEMA.field("effective_date").type == pa.date32()
+    assert FUEL_PRICE_CONFLICTS_SCHEMA.field("price_a").type == pa.float64()
+    assert FUEL_PRICE_CONFLICTS_SCHEMA.field("pct_difference").type == pa.float64()
+    assert FUEL_PRICE_CONFLICTS_SCHEMA.field("detected_at").type == pa.string()
+

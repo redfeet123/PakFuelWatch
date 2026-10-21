@@ -1,8 +1,10 @@
 """Shared utilities for Silver layer transformations and reject handling."""
 
+import json
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
@@ -36,6 +38,78 @@ def get_rejects_table_uri(table_name: str, base_uri: Optional[str] = None) -> st
     """Return the Silver rejects Delta table URI."""
     base = base_uri or "s3://silver/_rejects"
     return f"{base.rstrip('/')}/{table_name}"
+
+
+def get_quarantine_uri(source: str, filename: str, base_uri: Optional[str] = None) -> str:
+    """Return the Silver quarantine URI for a failed file."""
+    base = base_uri or "s3://silver/_quarantine"
+    return f"{base.rstrip('/')}/{source}/{filename}"
+
+
+def write_quarantine(
+    content: bytes,
+    filename: str,
+    source: str,
+    error_message: str,
+    page_or_sheet: Optional[str] = None,
+    base_quarantine_uri: Optional[str] = None,
+    storage_client: Optional[StorageClient] = None,
+) -> str:
+    """Write an unparseable or corrupted file to the quarantine location with diagnostic metadata.
+
+    Args:
+        content: Raw binary bytes of the failing file.
+        filename: Name of the file that failed parsing.
+        source: Source identifier (e.g. 'pbs_spi', 'pbs_cpi').
+        error_message: Summary description of the parse failure.
+        page_or_sheet: Optional identifier for the page or worksheet that failed.
+        base_quarantine_uri: Override base URI for quarantine destination.
+        storage_client: Optional StorageClient instance.
+
+    Returns:
+        The URI where the quarantined file was written.
+    """
+    target_uri = get_quarantine_uri(source, filename, base_quarantine_uri)
+    logger.error(
+        "[%s] Quarantining failing file %s (location: %s, error: %s) to %s",
+        source,
+        filename,
+        page_or_sheet or "unknown",
+        error_message,
+        target_uri,
+    )
+
+    if target_uri.startswith("s3://"):
+        storage = storage_client or get_storage_client()
+        today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        storage.put_raw(
+            source=f"_quarantine/{source}",
+            filename=filename,
+            content=content,
+            metadata={
+                "error_message": error_message,
+                "failing_page_or_sheet": str(page_or_sheet or "none"),
+                "failed_at": datetime.now(timezone.utc).isoformat(),
+                "original_filename": filename,
+            },
+            fetch_date=today_str,
+        )
+    else:
+        # Local filesystem path (e.g. in test fixtures / tmp_path)
+        out_path = Path(target_uri)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(content)
+        # Write metadata sidecar
+        meta_path = out_path.with_name(f"{filename}.metadata.json")
+        meta_dict = {
+            "error_message": error_message,
+            "failing_page_or_sheet": str(page_or_sheet or "none"),
+            "failed_at": datetime.now(timezone.utc).isoformat(),
+            "original_filename": filename,
+        }
+        meta_path.write_text(json.dumps(meta_dict, indent=2), encoding="utf-8")
+
+    return target_uri
 
 
 def write_rejects(

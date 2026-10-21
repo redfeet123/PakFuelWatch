@@ -22,7 +22,8 @@ htmlcov/
 .ruff_cache/
 
 # Local Data & Lakehouse Scratch
-data/
+data/*
+!data/seed
 *.duckdb
 *.duckdb.tmp/
 

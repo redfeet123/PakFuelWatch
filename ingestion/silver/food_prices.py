@@ -74,7 +74,11 @@ def normalize_unit(raw_unit: Optional[str]) -> Optional[str]:
     if not raw_unit or pd.isna(raw_unit):
         return None
     cleaned = str(raw_unit).strip().lower()
-    return VALID_UNITS_MAP.get(cleaned)
+    if cleaned in VALID_UNITS_MAP:
+        return VALID_UNITS_MAP[cleaned]
+    # Check if unit has a quantity prefix (e.g. '20 kg', '1 kg', '5 l', '2.5 kg')
+    unit_token = re.sub(r"^[\d\.\s]+", "", cleaned).strip()
+    return VALID_UNITS_MAP.get(unit_token)
 
 
 def parse_food_prices_raw(raw_bytes: bytes) -> pd.DataFrame:

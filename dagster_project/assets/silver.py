@@ -13,14 +13,29 @@ from dagster import (
 
 from dagster_project.assets.bronze import (
     bronze_brent,
+    bronze_fuel_news,
+    bronze_fuel_pso,
     bronze_fx,
     bronze_hdx_food,
+    bronze_pbs_cpi,
+    bronze_pbs_spi,
     bronze_worldbank,
 )
 from ingestion.silver.brent import transform_brent
 from ingestion.silver.cpi_monthly import transform_cpi_monthly
 from ingestion.silver.food_prices import transform_food_prices
 from ingestion.silver.fx import transform_fx
+from ingestion.sources.fuel import (
+    detect_fuel_price_gaps,
+    load_fuel_seed_history,
+    reconcile_fuel_prices,
+    transform_fuel_news,
+    transform_fuel_pso,
+)
+from ingestion.sources.pbs import (
+    transform_pbs_cpi,
+    transform_pbs_spi,
+)
 
 logger = logging.getLogger("pakfuelwatch.dagster.silver")
 
@@ -169,11 +184,147 @@ def silver_cpi_monthly(context: AssetExecutionContext) -> Output[Dict[str, Any]]
     )
 
 
+@asset(
+    group_name="silver",
+    compute_kind="delta",
+    deps=[bronze_pbs_spi],
+    description="Parse PBS weekly SPI release and merge into Silver spi_weekly Delta table.",
+)
+def silver_spi_weekly(context: AssetExecutionContext) -> Output[Dict[str, Any]]:
+    """Transform raw Bronze PBS SPI release into typed Silver spi_weekly Delta table."""
+    context.log.info("Starting silver_spi_weekly transformation...")
+    result = transform_pbs_spi()
+    context.log.info(
+        "Completed silver_spi_weekly: %d read, %d rejected, %d written to %s",
+        result.read_count,
+        result.rejected_count,
+        result.written_count,
+        result.table_uri,
+    )
+    return Output(
+        value={
+            "table_name": result.table_name,
+            "read_count": result.read_count,
+            "rejected_count": result.rejected_count,
+            "written_count": result.written_count,
+            "table_uri": result.table_uri,
+            "rejects_uri": result.rejects_uri,
+        },
+        metadata={
+            "read_count": result.read_count,
+            "rejected_count": result.rejected_count,
+            "written_count": result.written_count,
+            "table_uri": result.table_uri,
+            "rejects_uri": result.rejects_uri or "none",
+        },
+    )
+
+
+@asset(
+    group_name="silver",
+    compute_kind="delta",
+    deps=[bronze_pbs_cpi],
+    description="Parse PBS monthly CPI release and merge into Silver cpi_monthly Delta table.",
+)
+def silver_cpi_monthly_pbs(context: AssetExecutionContext) -> Output[Dict[str, Any]]:
+    """Transform raw Bronze PBS CPI release into typed Silver cpi_monthly Delta table."""
+    context.log.info("Starting silver_cpi_monthly_pbs transformation...")
+    result = transform_pbs_cpi()
+    context.log.info(
+        "Completed silver_cpi_monthly_pbs: %d read, %d rejected, %d written to %s",
+        result.read_count,
+        result.rejected_count,
+        result.written_count,
+        result.table_uri,
+    )
+    return Output(
+        value={
+            "table_name": result.table_name,
+            "read_count": result.read_count,
+            "rejected_count": result.rejected_count,
+            "written_count": result.written_count,
+            "table_uri": result.table_uri,
+            "rejects_uri": result.rejects_uri,
+        },
+        metadata={
+            "read_count": result.read_count,
+            "rejected_count": result.rejected_count,
+            "written_count": result.written_count,
+            "table_uri": result.table_uri,
+            "rejects_uri": result.rejects_uri or "none",
+        },
+    )
+
+
+@asset(
+    group_name="silver",
+    compute_kind="delta",
+    deps=[bronze_fuel_pso, bronze_fuel_news],
+    description="Transform, reconcile, and gap-check fuel prices into Silver Delta table.",
+)
+def silver_fuel_prices(context: AssetExecutionContext) -> Output[Dict[str, Any]]:
+    """Transform fuel prices from PSO and News, reconcile sources, and detect fortnight gaps."""
+    context.log.info("Starting silver_fuel_prices processing...")
+
+    # Transform both sources
+    res_pso = transform_fuel_pso()
+    res_news = transform_fuel_news()
+
+    # Reconcile sources
+    agreed, conflicts = reconcile_fuel_prices()
+    context.log.info("Fuel reconciliation: %d agreed, %d conflicts", agreed, conflicts)
+
+    # Detect fortnight gaps
+    gaps = detect_fuel_price_gaps()
+    if gaps:
+        context.log.warning("Detected %d missing fortnights in fuel prices: %s", len(gaps), gaps)
+
+    total_read = res_pso.read_count + res_news.read_count
+    total_written = res_pso.written_count + res_news.written_count
+
+    return Output(
+        value={
+            "total_read": total_read,
+            "total_written": total_written,
+            "reconciled_agreements": agreed,
+            "conflicts_count": conflicts,
+            "gaps_count": len(gaps),
+        },
+        metadata={
+            "total_read": total_read,
+            "total_written": total_written,
+            "reconciled_agreements": agreed,
+            "conflicts_count": conflicts,
+            "gaps_count": len(gaps),
+        },
+    )
+
+
+@asset(
+    group_name="silver",
+    compute_kind="delta",
+    description="Load historical fuel prices from seed CSV into Silver fuel_prices table.",
+)
+def silver_fuel_seed_backfill(context: AssetExecutionContext) -> Output[Dict[str, Any]]:
+    """Load historical fuel prices from seed CSV."""
+    context.log.info("Starting silver_fuel_seed_backfill from CSV...")
+    res = load_fuel_seed_history()
+    context.log.info("Completed silver_fuel_seed_backfill: %d merged", res.written_count)
+    return Output(
+        value={"written_count": res.written_count},
+        metadata={"written_count": res.written_count, "table_uri": res.table_uri},
+    )
+
+
 silver_assets = [
     silver_brent,
     silver_fx,
     silver_food_prices,
     silver_cpi_monthly,
+    silver_spi_weekly,
+    silver_cpi_monthly_pbs,
+    silver_fuel_prices,
+    silver_fuel_seed_backfill,
 ]
 
 silver_all_job = define_asset_job(
@@ -185,3 +336,5 @@ silver_all_job = define_asset_job(
 silver_jobs = [
     silver_all_job,
 ]
+
+
