@@ -1,0 +1,106 @@
+version: 2
+
+models:
+  - name: stg_fuel_prices
+    description: "Staging model for fuel prices (petrol and diesel)"
+    columns:
+      - name: effective_date
+        description: "Effective date of fuel price revision"
+        tests:
+          - not_null
+      - name: product
+        description: "Fuel product type"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Petrol', 'Diesel']
+      - name: price_pkr_per_litre
+        description: "Price per litre in PKR"
+        tests:
+          - not_null
+      - name: source
+        description: "Source identifier"
+        tests:
+          - not_null
+      - name: confidence
+        description: "Reconciliation confidence tier"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['high', 'medium', 'low', 'conflict']
+
+  - name: stg_brent_daily
+    description: "Staging model for Brent crude daily spot prices"
+    columns:
+      - name: price_date
+        description: "Price date"
+        tests:
+          - not_null
+          - unique
+      - name: brent_price_usd
+        description: "Price in USD per barrel"
+        tests:
+          - not_null
+
+  - name: stg_fx_daily
+    description: "Staging model for USD/PKR daily exchange rates"
+    columns:
+      - name: rate_date
+        description: "Exchange rate date"
+        tests:
+          - not_null
+          - unique
+      - name: usd_pkr_rate
+        description: "USD to PKR exchange rate"
+        tests:
+          - not_null
+
+  - name: stg_food_prices
+    description: "Staging model for food commodity prices"
+    columns:
+      - name: price_date
+        description: "Observation date"
+        tests:
+          - not_null
+      - name: commodity
+        description: "Commodity name"
+        tests:
+          - not_null
+      - name: price_pkr
+        description: "Retail price in PKR"
+        tests:
+          - not_null
+
+  - name: stg_spi_weekly
+    description: "Staging model for weekly SPI basket prices"
+    columns:
+      - name: week_end_date
+        description: "SPI week ending date"
+        tests:
+          - not_null
+      - name: item
+        description: "Basket item name"
+        tests:
+          - not_null
+      - name: price_pkr
+        description: "Price in PKR"
+        tests:
+          - not_null
+
+  - name: stg_cpi_monthly
+    description: "Staging model for CPI index and YoY inflation"
+    columns:
+      - name: month
+        description: "Year and month"
+        tests:
+          - not_null
+      - name: category
+        description: "CPI category"
+        tests:
+          - not_null
+      - name: cpi_index
+        description: "CPI index value"
+        tests:
+          - not_null

@@ -27,6 +27,13 @@ data/*
 *.duckdb
 *.duckdb.tmp/
 
+# dbt build & logs
+dbt_project/target/*
+!dbt_project/target/manifest.json
+dbt_project/logs/
+dbt_project/.user.yml
+dbt_packages/
+
 # Patchright Browser Profiles & Downloads
 .patchright/
 .patchright-profile/

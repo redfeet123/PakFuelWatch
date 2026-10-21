@@ -1,0 +1,105 @@
+version: 2
+
+sources:
+  - name: silver
+    description: "Cleaned and typed Silver Delta tables hosted on MinIO object storage"
+    meta:
+      external_location: "delta_scan('s3://silver/{name}')"
+    tables:
+      - name: fuel_prices
+        description: "Fortnightly petrol and diesel retail prices in Pakistan"
+        loaded_at_field: "cast(effective_date as timestamp)"
+        freshness:
+          warn_after: {count: 30, period: day}
+          error_after: {count: 60, period: day}
+        columns:
+          - name: effective_date
+            description: "Date the price notification becomes effective"
+          - name: product
+            description: "Fuel product type (Petrol or Diesel)"
+          - name: price_pkr_per_litre
+            description: "Retail price in PKR per litre"
+          - name: source
+            description: "Origin source (pso, news, seed)"
+          - name: confidence
+            description: "Reconciliation confidence tier (high, medium, low, conflict)"
+
+      - name: brent_daily
+        description: "Daily Brent crude oil price in USD per barrel"
+        loaded_at_field: "cast(date as timestamp)"
+        freshness:
+          warn_after: {count: 7, period: day}
+          error_after: {count: 14, period: day}
+        columns:
+          - name: date
+            description: "Price observation date"
+          - name: price_usd
+            description: "Brent crude spot price in USD per barrel"
+          - name: source
+            description: "Data source identifier (fred, eia)"
+
+      - name: fx_daily
+        description: "Daily USD to PKR interbank closing foreign exchange rate"
+        loaded_at_field: "cast(date as timestamp)"
+        freshness:
+          warn_after: {count: 7, period: day}
+          error_after: {count: 14, period: day}
+        columns:
+          - name: date
+            description: "Rate observation date"
+          - name: pair
+            description: "Currency pair symbol (USD/PKR)"
+          - name: rate
+            description: "Exchange rate value"
+          - name: source
+            description: "Data provider (sbp, open_er)"
+
+      - name: food_prices
+        description: "Retail food commodity prices across Pakistani markets from WFP/HDX"
+        loaded_at_field: "cast(date as timestamp)"
+        freshness:
+          warn_after: {count: 30, period: day}
+          error_after: {count: 60, period: day}
+        columns:
+          - name: date
+            description: "Market price observation date"
+          - name: market
+            description: "City or market location"
+          - name: commodity
+            description: "Standardized food commodity name"
+          - name: price
+            description: "Retail price in PKR"
+          - name: unit
+            description: "Standard unit of measurement (e.g. KG)"
+
+      - name: spi_weekly
+        description: "Weekly Sensitive Price Indicator (SPI) basket item prices from PBS"
+        loaded_at_field: "cast(week_end as timestamp)"
+        freshness:
+          warn_after: {count: 14, period: day}
+          error_after: {count: 30, period: day}
+        columns:
+          - name: week_end
+            description: "SPI reporting week ending date"
+          - name: item
+            description: "Essential basket commodity item"
+          - name: price_pkr
+            description: "Average price in PKR"
+          - name: unit
+            description: "Unit of measurement"
+
+      - name: cpi_monthly
+        description: "Monthly Consumer Price Index (CPI) and YoY inflation rates from PBS and World Bank"
+        loaded_at_field: "cast(strptime(month || '-01', '%Y-%m-%d') as timestamp)"
+        freshness:
+          warn_after: {count: 60, period: day}
+          error_after: {count: 90, period: day}
+        columns:
+          - name: month
+            description: "Observation year and month (YYYY-MM)"
+          - name: category
+            description: "CPI category or sub-index"
+          - name: index_value
+            description: "Index value (base period = 100)"
+          - name: yoy_pct
+            description: "Year-over-year percentage inflation change"

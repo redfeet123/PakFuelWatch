@@ -9,6 +9,11 @@ from dagster_project.assets.bronze import (
     bronze_jobs,
     bronze_schedules,
 )
+from dagster_project.assets.dbt import (
+    dbt_assets_list,
+    dbt_jobs,
+    dbt_resource,
+)
 from dagster_project.assets.silver import (
     silver_assets,
     silver_jobs,
@@ -32,7 +37,9 @@ def placeholder_smoke_asset() -> str:
 
 
 defs = Definitions(
-    assets=[placeholder_smoke_asset, *bronze_assets, *silver_assets],
-    jobs=[*bronze_jobs, *silver_jobs],
+    assets=[placeholder_smoke_asset, *bronze_assets, *silver_assets, *dbt_assets_list],
+    jobs=[*bronze_jobs, *silver_jobs, *dbt_jobs],
     schedules=bronze_schedules,
+    resources={"dbt": dbt_resource},
 )
+

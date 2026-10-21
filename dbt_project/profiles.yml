@@ -1,0 +1,22 @@
+pakfuelwatch:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: 'data/gold.duckdb'
+      extensions:
+        - httpfs
+        - delta
+      secrets:
+        - type: s3
+          key_id: "{{ env_var('MINIO_ACCESS_KEY', 'minioadmin') }}"
+          secret: "{{ env_var('MINIO_SECRET_KEY', 'minioadmin') }}"
+          endpoint: "{{ env_var('MINIO_ENDPOINT', 'http://localhost:9000') | replace('http://', '') | replace('https://', '') }}"
+          url_style: path
+          use_ssl: false
+      settings:
+        s3_endpoint: "{{ env_var('MINIO_ENDPOINT', 'http://localhost:9000') | replace('http://', '') | replace('https://', '') }}"
+        s3_url_style: path
+        s3_use_ssl: false
+        s3_access_key_id: "{{ env_var('MINIO_ACCESS_KEY', 'minioadmin') }}"
+        s3_secret_access_key: "{{ env_var('MINIO_SECRET_KEY', 'minioadmin') }}"

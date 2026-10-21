@@ -1,0 +1,102 @@
+version: 2
+
+models:
+  - name: fuel_price_timeline
+    description: "Chronological timeline of fuel price revisions joined with nearest prior Brent crude and USD/PKR exchange rates, including absolute and percentage price movements."
+    columns:
+      - name: effective_date
+        description: "Revision effective date"
+        tests:
+          - not_null
+      - name: product
+        description: "Fuel product (Petrol or Diesel)"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Petrol', 'Diesel']
+      - name: price_pkr_per_litre
+        description: "Retail price in PKR per litre"
+        tests:
+          - not_null
+      - name: prev_fuel_price_pkr
+        description: "Previous revision retail price in PKR per litre"
+      - name: fuel_price_change_pkr
+        description: "Change in price in PKR per litre from previous revision"
+      - name: fuel_price_change_pct
+        description: "Percentage price change from previous revision"
+      - name: nearest_brent_usd
+        description: "Brent crude spot price (USD/bbl) on nearest prior date"
+      - name: nearest_usd_pkr
+        description: "USD/PKR exchange rate on nearest prior date"
+      - name: landed_crude_pkr_per_bbl
+        description: "Implied landed crude cost in PKR per barrel (Brent USD * USD/PKR)"
+      - name: confidence
+        description: "Source confidence tier"
+        tests:
+          - not_null
+
+  - name: pass_through_metrics
+    description: "Empirical pass-through analysis calculating sample size and Pearson correlation across 0 to 8 week lags between macro cost drivers (Brent, USD/PKR, Landed PKR) and domestic targets (Fuel, SPI, Food prices)."
+    columns:
+      - name: target_category
+        description: "Target category (Fuel Prices, SPI Basket, Food Prices)"
+        tests:
+          - not_null
+      - name: item_name
+        description: "Target commodity or product name"
+        tests:
+          - not_null
+      - name: driver_name
+        description: "Macro cost driver (Brent Crude, USD/PKR, Landed Crude)"
+        tests:
+          - not_null
+      - name: lag_weeks
+        description: "Lag horizon in weeks (0 through 8)"
+        tests:
+          - not_null
+      - name: sample_size
+        description: "Number of paired observation weeks"
+        tests:
+          - not_null
+
+  - name: price_change_signal
+    description: >
+      A transparent predictive indicator (UP, DOWN, FLAT) for the upcoming fortnightly fuel price revision.
+      
+      FORMULA SPECIFICATION:
+      1. Landed Crude Cost = Brent Crude Spot (USD/bbl) * USD/PKR Exchange Rate.
+      2. Landed Cost Change (%) = ((Current Landed Cost - Landed Cost at Last Revision) / Landed Cost at Last Revision) * 100.
+      3. Signal Logic:
+         - UP: Landed Cost Change > +1.5% (import cost increase exceeds government margin buffer, signaling price rise).
+         - DOWN: Landed Cost Change < -1.5% (import cost reduction exceeds buffer, signaling price cut).
+         - FLAT: Landed Cost Change between -1.5% and +1.5% (fluctuations absorbed within stability buffer).
+    columns:
+      - name: product
+        description: "Fuel product (Petrol or Diesel)"
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_fuel_prices')
+                field: product
+      - name: last_revision_date
+        description: "Date of the most recent fuel price revision"
+        tests:
+          - not_null
+      - name: current_fuel_price_pkr
+        description: "Current retail price in PKR per litre"
+        tests:
+          - not_null
+      - name: predicted_signal
+        description: "Recommended direction indicator (UP, DOWN, FLAT)"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['UP', 'DOWN', 'FLAT']
+      - name: signal_rationale
+        description: "Human-readable explanation of the signal calculation and drivers"
+        tests:
+          - not_null
