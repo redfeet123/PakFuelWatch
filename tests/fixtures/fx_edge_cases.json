@@ -1,0 +1,29 @@
+{
+  "status": "success",
+  "pair": "USD/PKR",
+  "base": "USD",
+  "target": "PKR",
+  "frequency": "daily",
+  "observations": [
+    {
+      "date": "2024-01-02",
+      "rate": 281.25
+    },
+    {
+      "date": "2024-01-02",
+      "rate": 281.30
+    },
+    {
+      "date": "2024-01-03",
+      "rate": null
+    },
+    {
+      "date": null,
+      "rate": 281.50
+    },
+    {
+      "date": "2024-01-04",
+      "rate": -5.0
+    }
+  ]
+}

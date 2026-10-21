@@ -1,0 +1,28 @@
+{
+  "help": "https://data.humdata.org/api/3/action/help_show?name=package_show",
+  "success": true,
+  "result": {
+    "id": "wfp-food-prices-for-pakistan",
+    "name": "wfp-food-prices-for-pakistan",
+    "title": "Pakistan - Food Prices",
+    "notes": "Food prices for Pakistan from WFP",
+    "resources": [
+      {
+        "id": "res-metadata-999",
+        "name": "QuickCharts-wfp_food_prices_pakistan.csv",
+        "format": "CSV",
+        "url": "https://data.humdata.org/dataset/pakistan-food-prices/download/qc_food_prices.csv",
+        "download_url": "https://data.humdata.org/dataset/pakistan-food-prices/download/qc_food_prices.csv",
+        "last_modified": "2024-01-10T05:00:00"
+      },
+      {
+        "id": "res-data-123",
+        "name": "wfp_food_prices_pakistan.csv",
+        "format": "CSV",
+        "url": "https://data.humdata.org/dataset/pakistan-food-prices/download/wfp_food_prices_pakistan.csv",
+        "download_url": "https://data.humdata.org/dataset/pakistan-food-prices/download/wfp_food_prices_pakistan.csv",
+        "last_modified": "2024-01-10T08:00:00"
+      }
+    ]
+  }
+}

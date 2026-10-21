@@ -43,6 +43,10 @@ class Settings(BaseSettings):
         default=None,
         description="API key for State Bank of Pakistan (SBP) data portal",
     )
+    fx_provider: str = Field(
+        default="sbp",
+        description="FX rate provider: 'sbp' (primary) or 'frankfurter' (fallback/free)",
+    )
 
     # Telegram Bot Alerts
     telegram_bot_token: Optional[str] = Field(

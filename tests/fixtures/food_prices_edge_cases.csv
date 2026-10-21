@@ -1,0 +1,8 @@
+date,admin1,admin2,market,latitude,longitude,category,commodity,unit,priceflag,pricetype,currency,price,usdprice
+#date,#adm1+name,#adm2+name,#loc+market+name,#geo+lat,#geo+lon,#item+type,#item+name,#item+unit,#item+priceflag,#item+pricetype,#currency+code,#value+price,#value+usdprice
+2024-01-15,Punjab,Lahore,Lahore,31.5497,74.3436,cereals and tubers,Wheat flour - Retail,KG,actual,Retail,PKR,145.0,0.52
+2024-01-15,Punjab,Lahore,Lahore,31.5497,74.3436,cereals and tubers,Wheat flour - Retail,KG,actual,Retail,PKR,145.0,0.52
+2024-01-15,Punjab,Lahore,Lahore,31.5497,74.3436,cereals and tubers,Wheat flour - Retail,KG,actual,Retail,PKR,,0.52
+,Punjab,Lahore,Lahore,31.5497,74.3436,cereals and tubers,Wheat flour - Retail,KG,actual,Retail,PKR,145.0,0.52
+2024-01-15,Sindh,Karachi,Karachi,24.8607,67.0011,cereals and tubers,Rice (basmati) - Retail,bushel,actual,Retail,PKR,280.0,1.00
+2024-01-15,Khyber Pakhtunkhwa,Peshawar,Peshawar,34.0151,71.5249,pulses,Lentils (masoor) - Retail,KG,actual,Retail,PKR,-50.0,-0.18

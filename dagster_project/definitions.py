@@ -4,6 +4,16 @@ import logging
 
 from dagster import Definitions, asset
 
+from dagster_project.assets.bronze import (
+    bronze_assets,
+    bronze_jobs,
+    bronze_schedules,
+)
+from dagster_project.assets.silver import (
+    silver_assets,
+    silver_jobs,
+)
+
 logger = logging.getLogger("pakfuelwatch.dagster")
 
 
@@ -22,5 +32,7 @@ def placeholder_smoke_asset() -> str:
 
 
 defs = Definitions(
-    assets=[placeholder_smoke_asset],
+    assets=[placeholder_smoke_asset, *bronze_assets, *silver_assets],
+    jobs=[*bronze_jobs, *silver_jobs],
+    schedules=bronze_schedules,
 )
